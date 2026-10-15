@@ -55,10 +55,42 @@ https://www.outsystems.com/platform/agentic-systems-engineering não pôde ser l
 - Se o Context Graph indexa código que não é OutSystems (React Native, Java, .NET de um BFF).
   As fontes descrevem o estate OutSystems. A análise de legado externo vem via AWS Transform
   (COBOL, Java) em EAP, e alimenta o Mentor para gerar apps OutSystems, não código externo.
-- Deployment self-managed / on-premise do Context Graph. É ODC, logo cloud (AWS, regiões UE).
-  Há mensagem de "digital sovereignty" mas sem opção on-prem confirmada. Relevante para
-  CSSF / DORA na POST. A proposta eboo fala em "on-premise OutSystems Context Graph": corrigir.
+- Onde corre o Context Graph em ODC Self-Hosted (ver secção abaixo). Provavelmente no control
+  plane OutSystems, não no cluster do cliente. Confirmar com a OutSystems.
+- Disponibilidade do Context Graph / Agent Experience em O11 self-managed: não confirmada.
+  Tudo o que é publicado aponta para ODC. O11 tem só o O11 MCP local (Service Studio).
 - Suporte a JavaScript / Cordova como fonte de legacy analysis: não encontrado.
+
+## Opções de deployment ODC (CONFIRMADO, 2026-10)
+
+- ODC "clássico": SaaS gerido pela OutSystems em AWS. Regiões UE: Frankfurt, Irlanda, Londres.
+  Escolha de região para residência de dados.
+- ODC Self-Hosted (anunciado 2026-03-31): apps, dados e agentes correm no Kubernetes do
+  cliente (on-prem, cloud privada ou pública). Os serviços de plataforma (build, deploy,
+  portal, gestão) continuam geridos pela OutSystems. É um modelo híbrido: runtime no cliente,
+  control plane na OutSystems. Não é "on-prem" no sentido O11.
+- Soberania UE: parceria com StackIT (Schwarz Group) e "outros fornecedores de cloud soberana
+  UE a seguir", segundo a OutSystems.
+- Terminologia correcta para a POST: "ODC Self-Hosted", nunca "ODC self-managed" nem
+  "on-premise ODC". "Self-managed" é vocabulário O11.
+- A proposta eboo fala em "on-premise OutSystems Context Graph": substituir por
+  "ODC Self-Hosted, runtime e dados em infraestrutura POST no Luxemburgo, control plane
+  OutSystems em região UE". Confirmar com a OutSystems onde corre o Context Graph nesse modelo.
+
+## Mensagem do champion POST (2026-10-15)
+
+- Champion: Data Governance and Digital Program Manager da POST. A proposta eboo publicada
+  no ai.studio foi gerada pela IA dele ("l'approche imaginée par mon IA"). Logo, as
+  incoerências (on-prem Context Graph, O11/ODC, Cordova como legacy backend) são dele, não
+  da Indigo. Corrigir com tacto, sem o contradizer publicamente.
+- Condição que ele põe: relevância da OutSystems depende do "support des frameworks Apache
+  Cordova, React Native 0.76 et React 19". Resposta técnica: OutSystems não executa nem gera
+  esses frameworks; relaciona-se com eles por APIs REST (framework-agnóstico) e, ao nível dos
+  agentes, pelo MCP / Agent Experience consultado pelo Claude Code ou Cursor dos devs React
+  Native. Mentor gera apps OutSystems, não código React Native.
+- Ele vai abordar o conceito numa sexta-feira (2026-10-17) e, havendo interesse, marca
+  reunião para descrever a situação. Não contornar as primeiras conversas com Fabrice C.
+  Retorno previsto na semana de 2026-10-20.
 
 ## Implicações práticas para o caso eboo / POST
 
