@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="pt">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tracker</title>
+<style>
+  :root {
+    --bg: #f6f7f9; --card: #fff; --text: #1d2330; --muted: #677085; --line: #e3e6ec;
+    --accent: #2f6fde; --ok: #1f9d55; --warn: #c27c0e; --bad: #d23c3c; --chip: #eef2fb;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #12151b; --card: #1b1f27; --text: #e6e9ef; --muted: #98a1b3; --line: #2b313c;
+      --accent: #6b9cff; --ok: #4cc685; --warn: #e3a43b; --bad: #ff6b6b; --chip: #252c3a;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 15px/1.4 system-ui, sans-serif; background: var(--bg); color: var(--text); }
+  header { padding: 14px 16px; background: var(--card); border-bottom: 1px solid var(--line);
+           display: flex; flex-wrap: wrap; gap: 12px 24px; align-items: center; }
+  h1 { font-size: 18px; margin: 0; }
+  h2 { font-size: 15px; margin: 0 0 8px; color: var(--muted); font-weight: 600; }
+  main { padding: 16px; display: grid; gap: 16px; max-width: 1400px; margin: 0 auto; }
+  .stats { display: flex; flex-wrap: wrap; gap: 8px 18px; }
+  .stat b { font-size: 20px; display: block; }
+  .stat span { color: var(--muted); font-size: 12px; }
+  .stat.bad b { color: var(--bad); }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 12px; }
+  .alert { display: flex; gap: 10px; align-items: center; padding: 8px 10px; border-radius: 8px;
+           border-left: 4px solid var(--bad); background: color-mix(in srgb, var(--bad) 10%, transparent);
+           margin-bottom: 6px; }
+  .alert.exit { border-color: var(--warn); background: color-mix(in srgb, var(--warn) 12%, transparent); }
+  .alert .grow { flex: 1; }
+  button { font: inherit; padding: 4px 10px; border-radius: 6px; border: 1px solid var(--line);
+           background: var(--card); color: var(--text); cursor: pointer; }
+  button:hover { border-color: var(--accent); }
+  input[type=search] { width: 100%; font: inherit; padding: 8px 10px; border-radius: 8px;
+                       border: 1px solid var(--line); background: var(--bg); color: var(--text); }
+  table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+  td, th { text-align: left; padding: 6px 4px; border-bottom: 1px solid var(--line); }
+  th { color: var(--muted); font-weight: 500; font-size: 12px; }
+  .floors { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+  .zone { border-top: 1px solid var(--line); padding: 8px 0; }
+  .zone:first-of-type { border-top: 0; }
+  .zone-head { display: flex; justify-content: space-between; font-weight: 600; }
+  .zone-head small { color: var(--muted); font-weight: 400; }
+  .chips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+  .chip { background: var(--chip); padding: 2px 8px; border-radius: 99px; font-size: 13px; }
+  .chip.missing { background: color-mix(in srgb, var(--bad) 20%, transparent); }
+  .status { font-size: 12px; padding: 1px 6px; border-radius: 4px; background: var(--chip); }
+  .status.present { color: var(--ok); } .status.missing { color: var(--bad); }
+  .muted { color: var(--muted); }
+  details summary { cursor: pointer; color: var(--muted); }
+  code { font-size: 12px; word-break: break-all; }
+  .empty { color: var(--muted); font-style: italic; }
+</style>
+</head>
+<body>
+<header>
+  <h1 id="site">Tracker</h1>
+  <div class="stats" id="stats"></div>
+</header>
+<main>
+  <section class="card" id="alerts-card">
+    <h2>Alertas</h2>
+    <div id="alerts"><p class="empty">Sem alertas.</p></div>
+  </section>
+
+  <section class="card">
+    <h2>Procurar criança</h2>
+    <input type="search" id="q" placeholder="Nome…" autocomplete="off">
+    <table id="results" hidden>
+      <thead><tr><th>Nome</th><th>Estado</th><th>Zona</th><th>Visto</th><th></th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </section>
+
+  <section>
+    <h2>Por piso</h2>
+    <div class="floors" id="floors"></div>
+  </section>
+
+  <section class="card">
+    <details>
+      <summary>Diagnóstico (recetores e beacons não registados)</summary>
+      <div id="health"></div>
+    </details>
+  </section>
+</main>
+<script>
+const STATUS = { absent: "ausente", present: "presente", missing: "em falta", checked_out: "saiu" };
+const ALERT = { missing: "Não detetado", exit: "Na saída" };
+let site = null, now = Date.now() / 1000;
+
+function h(tag, attrs = {}, ...children) {
+  const el = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (k.startsWith("on")) el.addEventListener(k.slice(2), v);
+    else if (v !== null && v !== undefined && v !== false) el.setAttribute(k, v);
+  }
+  for (const c of children.flat()) el.append(c instanceof Node ? c : document.createTextNode(c ?? ""));
+  return el;
+}
+const ago = ts => {
+  if (!ts) return "—";
+  const s = Math.max(0, Math.round(now - ts));
+  return s < 60 ? `há ${s}s` : s < 3600 ? `há ${Math.round(s / 60)} min` : `há ${Math.round(s / 3600)} h`;
+};
+const api = (path, opts) => fetch(path, opts).then(r => r.json());
+const floorName = id => id === null ? "Escadas / transição" : (site.floors.find(f => f.id === id)?.name ?? `Piso ${id}`);
+
+function renderStats(c) {
+  const items = [
+    ["Presentes", c.present], ["Dentro", c.inside], ["Exterior", c.outdoor],
+    ["Em falta", c.missing, c.missing > 0], ["Saíram", c.checked_out], ["Registadas", c.registered],
+  ];
+  document.getElementById("stats").replaceChildren(
+    ...items.map(([label, n, bad]) => h("div", { class: "stat" + (bad ? " bad" : "") }, h("b", {}, n), h("span", {}, label))));
+}
+
+function renderAlerts(alerts) {
+  const box = document.getElementById("alerts");
+  if (!alerts.length) return box.replaceChildren(h("p", { class: "empty" }, "Sem alertas."));
+  const zoneName = id => site.zones.find(z => z.id === id)?.name ?? "zona desconhecida";
+  box.replaceChildren(...alerts.slice().reverse().map(a =>
+    h("div", { class: "alert " + a.kind },
+      h("div", { class: "grow" }, h("b", {}, `${ALERT[a.kind] ?? a.kind}: ${a.name}`),
+        h("div", { class: "muted" }, `Última zona: ${zoneName(a.zone)} · ${ago(a.ts)}`)),
+      h("button", { onclick: () => api(`/api/alerts/${a.id}/ack`, { method: "POST" }).then(refresh) }, "Visto"))));
+}
+
+function renderFloors(zones) {
+  const groups = new Map();
+  for (const z of zones) {
+    const key = z.floor === null ? "transit" : z.floor;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(z);
+  }
+  const order = [...site.floors.map(f => f.id), "transit"].filter(k => groups.has(k));
+  document.getElementById("floors").replaceChildren(...order.map(key => {
+    const zs = groups.get(key);
+    const total = zs.reduce((n, z) => n + z.count, 0);
+    return h("div", { class: "card" },
+      h("h2", {}, `${floorName(key === "transit" ? null : key)} · ${total}`),
+      zs.map(z => h("div", { class: "zone" },
+        h("div", { class: "zone-head" }, h("span", {}, z.name), h("small", {}, `${z.count}${z.kind !== "room" ? " · " + z.kind : ""}`)),
+        z.children.length
+          ? h("div", { class: "chips" }, z.children.map(c => h("span", { class: "chip " + c.status }, c.name)))
+          : null)));
+  }));
+}
+
+async function renderSearch() {
+  const q = document.getElementById("q").value.trim();
+  const table = document.getElementById("results");
+  if (!q) { table.hidden = true; return; }
+  const rows = await api(`/api/children?q=${encodeURIComponent(q)}`);
+  table.hidden = false;
+  const act = (id, what) => () => api(`/api/children/${encodeURIComponent(id)}/${what}`, { method: "POST" }).then(refresh);
+  table.tBodies[0].replaceChildren(...(rows.length ? rows.slice(0, 50).map(c =>
+    h("tr", {},
+      h("td", {}, c.name, c.group ? h("div", { class: "muted" }, c.group) : null),
+      h("td", {}, h("span", { class: "status " + c.status }, STATUS[c.status] ?? c.status)),
+      h("td", {}, c.zone_name ?? "—", c.zone ? h("div", { class: "muted" }, floorName(c.floor)) : null),
+      h("td", {}, ago(c.last_seen)),
+      h("td", {}, c.status === "checked_out"
+        ? h("button", { onclick: act(c.tag_id, "reset") }, "Repor")
+        : h("button", { onclick: act(c.tag_id, "checkout") }, "Saída")))
+  ) : [h("tr", {}, h("td", { colspan: 5, class: "empty" }, "Nenhuma criança encontrada."))]));
+}
+
+function renderHealth(hl) {
+  const box = document.getElementById("health");
+  const gw = h("table", {}, h("thead", {}, h("tr", {}, h("th", {}, "Recetor"), h("th", {}, "Zona"), h("th", {}, "Leituras"), h("th", {}, "Última"))),
+    h("tbody", {}, hl.gateways.map(g => h("tr", {}, h("td", {}, g.id), h("td", {}, g.zone), h("td", {}, g.readings),
+      h("td", { class: g.last_seen_s_ago === null || g.last_seen_s_ago > 30 ? "status missing" : "" },
+        g.last_seen_s_ago === null ? "nunca" : `há ${g.last_seen_s_ago}s`)))));
+  const unknown = hl.unknown_tags.length
+    ? h("table", {}, h("thead", {}, h("tr", {}, h("th", {}, "Beacon id (copiar para tags: no config)"), h("th", {}, "Recetor"), h("th", {}, "RSSI"), h("th", {}, "Última"))),
+        h("tbody", {}, hl.unknown_tags.map(t => h("tr", {}, h("td", {}, h("code", {}, t.id)), h("td", {}, t.gateway), h("td", {}, t.rssi), h("td", {}, `há ${t.last_seen_s_ago}s`)))))
+    : h("p", { class: "empty" }, "Nenhum beacon não registado.");
+  const extra = hl.unknown_gateways.length
+    ? h("p", { class: "muted" }, "Recetores não configurados: ", hl.unknown_gateways.map(g => g.id).join(", "))
+    : null;
+  box.replaceChildren(gw, h("h2", { style: "margin-top:12px" }, "Beacons não registados"), unknown, extra);
+}
+
+async function refresh() {
+  try {
+    if (!site) {
+      site = await api("/api/site");
+      document.getElementById("site").textContent = site.name;
+      document.title = site.name;
+    }
+    const [head, alerts, zones, health] = await Promise.all(
+      ["/api/headcount", "/api/alerts", "/api/zones", "/api/health"].map(p => api(p)));
+    now = health.now;
+    renderStats(head); renderAlerts(alerts); renderFloors(zones); renderHealth(health);
+    await renderSearch();
+  } catch (e) { console.error(e); }
+}
+document.getElementById("q").addEventListener("input", renderSearch);
+refresh();
+setInterval(refresh, 2000);
+</script>
+</body>
+</html>

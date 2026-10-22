@@ -1,0 +1,23 @@
+# Protótipo: broker MQTT (recebe os ESP32) + tracker (motor, API e interface).
+#   docker compose up -d                              -> hardware real
+#   TRACKER_ARGS="--simulate 300" docker compose up -d -> simulação via MQTT
+services:
+  mosquitto:
+    image: eclipse-mosquitto:2
+    restart: unless-stopped
+    ports: ["1883:1883"]
+    volumes:
+      - ./deploy/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+
+  tracker:
+    build: .
+    restart: unless-stopped
+    depends_on: [mosquitto]
+    ports: ["8000:8000"]
+    volumes:
+      - ./config:/app/config:ro
+      - tracker-data:/data
+    command: python -m tracker --config config/house.yaml --db /data/tracker.db --mqtt mosquitto:1883 ${TRACKER_ARGS:-}
+
+volumes:
+  tracker-data:

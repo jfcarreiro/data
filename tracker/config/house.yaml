@@ -1,0 +1,43 @@
+# Protótipo em casa: 4 pisos. Ajustar nomes e divisões à casa real.
+# Cada "gateway" é um recetor ESP32; o id tem de ser igual ao "Room" configurado no ESPresense.
+name: Casa (protótipo)
+
+floors:
+  - { id: 0, name: Piso 0 }
+  - { id: 1, name: Piso 1 }
+  - { id: 2, name: Piso 2 }
+  - { id: 3, name: Piso 3 }
+
+zones:
+  - { id: entrada,    name: Entrada (porta da rua), floor: 0, kind: exit }
+  - { id: sala,       name: Sala,                   floor: 0 }
+  - { id: cozinha,    name: Cozinha,                floor: 0 }
+  - { id: jardim,     name: Jardim,                 floor: 0, kind: outdoor }
+  - { id: escadas,    name: Escadas,                kind: transit }
+  - { id: quarto1,    name: Quarto 1,               floor: 1 }
+  - { id: escritorio, name: Escritório,             floor: 1 }
+  - { id: quarto2,    name: Quarto 2,               floor: 2 }
+  - { id: sotao,      name: Sótão,                  floor: 3 }
+
+gateways:
+  - { id: entrada,    zone: entrada }
+  - { id: sala,       zone: sala }
+  - { id: cozinha,    zone: cozinha }
+  - { id: jardim,     zone: jardim }
+  - { id: escadas,    zone: escadas }
+  - { id: quarto1,    zone: quarto1 }
+  - { id: escritorio, zone: escritorio }
+  - { id: quarto2,    zone: quarto2 }
+  - { id: sotao,      zone: sotao }
+
+# Pulseiras reais. O id aparece em "Diagnóstico > Beacons não registados" na interface
+# assim que um recetor o ouvir; copiar para aqui e reiniciar.
+tags: []
+#  - { id: "iBeacon:e2c56db5-dffb-48d2-b060-d0f5a71096e0-1-1", name: Pulseira 1, group: Teste }
+
+engine:
+  window_s: 15
+  smoothing: 0.3
+  switch_margin_db: 4
+  switch_hold_s: 3
+  missing_after_s: 60
