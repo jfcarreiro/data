@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "outsystems": {
+      "type": "http",
+      "url": "https://indigo.outsystems.dev/mcp",
+      "headers": {
+        "X-OutSystems-Plugin-Version": "1.12.0"
+      }
+    }
+  }
+}

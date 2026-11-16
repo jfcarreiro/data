@@ -1,0 +1,23 @@
+{
+  "extraKnownMarketplaces": {
+    "outsystems": {
+      "source": {
+        "source": "github",
+        "repo": "OutSystems/outsystems-mcp"
+      }
+    }
+  },
+  "enabledPlugins": {
+    "outsystems@outsystems": true
+  },
+  "pluginConfigs": {
+    "outsystems@outsystems": {
+      "options": {
+        "tenant_hostname": "indigo.outsystems.dev"
+      }
+    }
+  },
+  "enabledMcpjsonServers": [
+    "outsystems"
+  ]
+}
